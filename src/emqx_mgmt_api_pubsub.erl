@@ -42,7 +42,13 @@
             func   => unsubscribe,
             descr  => "Unsubscribe a topic"}).
 
--export([subscribe/2, publish/2, unsubscribe/2]).
+-rest_api(#{name   => mqtt_rule_notice,
+            method => 'POST',
+            path   => "/mqtt/rulenotice",
+            func   => rule_notice,
+            descr  => "Notice CTQ-MQ birdge subscribe topic"}).
+
+-export([subscribe/2, publish/2, unsubscribe/2, rule_notice/2]).
 
 subscribe(_Bindings, Params) ->
     ClientId = get_value(<<"client_id">>, Params),
@@ -69,6 +75,13 @@ unsubscribe(_Bindings, Params) ->
 topics(Params) ->
     Topics = [get_value(<<"topic">>, Params, <<"">>) | binary:split(get_value(<<"topics">>, Params, <<"">>), <<",">>, [global])],
     [Topic || Topic <- Topics, Topic =/= <<"">>].
+
+rule_notice(_Bindings, Params) ->
+    Topic = get_value(<<"topic">>, Params),
+    Flag  = get_value(<<"flag">>, Params),
+    Payload = jsx:encode([{topic, Topic}, {flag, Flag}]),
+    Msg = emqx_message:make(broker, 0, <<"$SYS/rulenotice">>, Payload),
+    emqx_mgmt:publish(Msg).
 
 %%TODO:
 %%validate(qos, Qos) ->

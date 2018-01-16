@@ -48,7 +48,13 @@
             func   => rule_notice,
             descr  => "Notice CTQ-MQ birdge subscribe topic"}).
 
--export([subscribe/2, publish/2, unsubscribe/2, rule_notice/2]).
+-rest_api(#{name   => dm_publish,
+            method => 'POST',
+            path   => "/dm/publish",
+            func   => dm_publish,
+            descr  => "DM Publish a MQTT message for Device"}).
+
+-export([subscribe/2, publish/2, unsubscribe/2, rule_notice/2, dm_publish/2]).
 
 subscribe(_Bindings, Params) ->
     ClientId = get_value(<<"client_id">>, Params),
@@ -66,6 +72,27 @@ publish(_Bindings, Params) ->
         Msg = emqx_message:make(ClientId, Qos, Topic, Payload),
         emqx_mgmt:publish(Msg#mqtt_message{retain = Retain})
     end, Topics).
+
+dm_publish(_Bindings, Params) ->
+    case check_required_params(Params) of
+    ok ->
+        Payload  = jsx:decode(get_value(<<"payload">>, Params)),
+        TaskId   = get_value(<<"DMSN">>, Payload),
+        make_publish(Params, Payload),
+        {ok, [{code, 0}, {taskId, TaskId}, {message, <<>>}]};
+    {error, Error} ->
+        {ok, [{code, 1}, {message, list_to_binary(Error)}]}
+    end.
+
+make_publish(Params, Payload) ->
+    Topic= get_value(<<"topic">>, Params),
+    ClientId = get_value(<<"client_id">>, Params, <<"DM">>),
+    Qos      = get_value(<<"qos">>, Params, 1),
+    Ttl      = get_value(<<"ttl">>, Params),
+    AppId    = get_value(<<"appId ">>, Params, <<"DM">>),
+    Payload1 = jsx:encode([{ttl, Ttl}, {appId, AppId} | Payload]),
+    Msg      = emqx_message:make(ClientId, Qos, Topic, Payload1),
+    emqx_mgmt:publish(Msg).
 
 unsubscribe(_Bindings, Params) ->
     ClientId = get_value(<<"client_id">>, Params),
@@ -90,3 +117,20 @@ rule_notice(_Bindings, Params) ->
 %%validate(topic, Topic) ->
 %%    emqx_topic:validate({name, Topic}).
 
+%% Internal function
+check_required_params(Params) ->
+    check_required_params(Params, required_params()).
+
+check_required_params(_, []) -> ok;
+check_required_params(Params, [Key | Rest]) ->
+    case lists:keytake(Key, 1, Params) of
+      {value, _, NewParams} -> check_required_params(NewParams, Rest);
+      false                 -> {error, binary_to_list(Key) ++ " must be specified"}
+    end.
+
+required_params() ->
+  [
+    <<"topic">>,
+    <<"payload">>,
+    <<"ttl">>
+  ].

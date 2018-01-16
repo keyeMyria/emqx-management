@@ -71,10 +71,17 @@ handle_request(_Method, _Path, Req) ->
 
 authorize_appid(Req) ->
     case Req:get_header_value("Authorization") of
-        undefined -> false;
+        undefined -> is_dm_from(Req);
         "Basic " ++ BasicAuth ->
             {AppId, AppSecret} = user_passwd(BasicAuth),
             emqx_mgmt_auth:is_authorized(AppId, AppSecret)
+    end.
+
+is_dm_from(Req) ->
+    {Path0, _, _} = mochiweb_util:urlsplit_path(Req:get(raw_path)),
+    case Path0 of
+        "/api/v2/dm/publish" -> true;
+        _ -> false
     end.
 
 user_passwd(BasicAuth) ->

@@ -77,15 +77,14 @@ dm_publish(_Bindings, Params) ->
     case check_required_params(Params) of
     ok ->
         Payload  = jsx:decode(get_value(<<"payload">>, Params)),
-        TaskId   = get_value(<<"DMSN">>, Payload),
         make_publish(Params, Payload),
-        {ok, [{code, 0}, {taskId, TaskId}, {message, <<>>}]};
+        {ok, [{code, 0}, {message, <<>>}]};
     {error, Error} ->
         {ok, [{code, 1}, {message, list_to_binary(Error)}]}
     end.
 
 make_publish(Params, Payload) ->
-    Topic= get_value(<<"topic">>, Params),
+    Topic = list_to_binary(mount(Params)),
     ClientId = get_value(<<"client_id">>, Params, <<"DM">>),
     Qos      = get_value(<<"qos">>, Params, 1),
     Ttl      = get_value(<<"ttl">>, Params),
@@ -130,7 +129,21 @@ check_required_params(Params, [Key | Rest]) ->
 
 required_params() ->
   [
+    <<"tenantId">>,
+    <<"productId">>,
+    <<"deviceId">>,
     <<"topic">>,
     <<"payload">>,
     <<"ttl">>
   ].
+
+mount(Params) ->
+    Topic = to_list(get_value(<<"topic">>, Params)),
+    lists:foldr(fun(Key, AccIn) ->
+                lists:concat([to_list(get_value(Key, Params)), "/", AccIn])
+                end, Topic, [<<"tenantId">>, <<"productId">>, <<"deviceId">>]).
+
+to_list(I) when is_integer(I) ->
+    integer_to_list(I);
+to_list(L) when is_binary(L) ->
+    binary_to_list(L).

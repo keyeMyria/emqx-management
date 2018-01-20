@@ -104,10 +104,11 @@ topics(Params) ->
 
 rule_notice(_Bindings, Params) ->
     Topic = get_value(<<"topic">>, Params),
-    Flag  = get_value(<<"flag">>, Params),
-    Payload = jsx:encode([{topic, Topic}, {flag, Flag}]),
-    Msg = emqx_message:make(broker, 0, <<"$SYS/rulenotice">>, Payload),
-    emqx_mgmt:publish(Msg).
+    Subscribe  = get_value(<<"subscribe">>, Params),
+    Payload = jsx:encode([{topic, Topic}, {subscribe, Subscribe}]),
+    Msg = emqx_message:make(broker, 1, <<"$SYS/rulenotice">>, Payload),
+    emqx_mgmt:publish(Msg),
+    ok.
 
 %%TODO:
 %%validate(qos, Qos) ->

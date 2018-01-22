@@ -76,21 +76,19 @@ publish(_Bindings, Params) ->
 dm_publish(_Bindings, Params) ->
     case check_required_params(Params) of
     ok ->
-        Payload  = jsx:decode(get_value(<<"payload">>, Params)),
-        make_publish(Params, Payload),
+        make_publish(Params),
         {ok, [{code, 0}, {message, <<>>}]};
     {error, Error} ->
         {ok, [{code, 1}, {message, list_to_binary(Error)}]}
     end.
 
-make_publish(Params, Payload) ->
+make_publish(Params) ->
     Topic = list_to_binary(mount(Params)),
-    ClientId = get_value(<<"client_id">>, Params, <<"DM">>),
     Qos      = get_value(<<"qos">>, Params, 1),
     Ttl      = get_value(<<"ttl">>, Params),
+    Payload  = get_value(<<"payload">>, Params),
     AppId    = get_value(<<"appId ">>, Params, <<"DM">>),
-    Payload1 = jsx:encode([{ttl, Ttl}, {appId, AppId} | Payload]),
-    Msg      = emqx_message:make(ClientId, Qos, Topic, Payload1),
+    Msg      = emqx_message:make(AppId, Qos, Topic, Payload, [{<<"ttl">>, Ttl}]),
     emqx_mgmt:publish(Msg).
 
 unsubscribe(_Bindings, Params) ->

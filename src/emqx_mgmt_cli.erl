@@ -32,7 +32,7 @@
 -export([load/0]).
 
 -export([status/1, broker/1, cluster/1, clients/1, sessions/1,
-         routes/1, subscriptions/1, plugins/1, bridges/1,
+         routes/1, subscriptions/1, plugins/1, bridges/1, edge/1,
          listeners/1, vm/1, mnesia/1, trace/1, acl/1, license/1, mgmt/1]).
 
 -define(PROC_INFOKEYS, [status,
@@ -374,76 +374,117 @@ plugins(_) ->
 %%--------------------------------------------------------------------
 %% @doc Bridges command
 
-% bridges(["list"]) ->
-%     foreach(fun({Node, Topic, _Pid}) ->
-%                 emqx_cli:print("bridge: ~s--~s-->~s~n", [node(), Topic, Node])
-%             end, emqx_bridge_sup_sup:bridges());
-
-% bridges(["options"]) ->
-%     ?PRINT_MSG("Options:~n"),
-%     ?PRINT_MSG("  qos     = 0 | 1 | 2~n"),
-%     ?PRINT_MSG("  prefix  = string~n"),
-%     ?PRINT_MSG("  suffix  = string~n"),
-%     ?PRINT_MSG("  queue   = integer~n"),
-%     ?PRINT_MSG("Example:~n"),
-%     ?PRINT_MSG("  qos=2,prefix=abc/,suffix=/yxz,queue=1000~n");
-
-% bridges(["start", SNode, Topic]) ->
-%     case emqx_bridge_sup_sup:start_bridge(list_to_atom(SNode), list_to_binary(Topic)) of
-%         {ok, _}        -> ?PRINT_MSG("bridge is started.~n");
-%         {error, Error} -> ?PRINT("error: ~p~n", [Error])
-%     end;
-
-% bridges(["start", SNode, Topic, OptStr]) ->
-%     Opts = parse_opts(bridge, OptStr),
-%     case emqx_bridge_sup_sup:start_bridge(list_to_atom(SNode), list_to_binary(Topic), Opts) of
-%         {ok, _}        -> ?PRINT_MSG("bridge is started.~n");
-%         {error, Error} -> ?PRINT("error: ~p~n", [Error])
-%     end;
-
-% bridges(["stop", SNode, Topic]) ->
-%     case emqx_bridge_sup_sup:stop_bridge(list_to_atom(SNode), list_to_binary(Topic)) of
-%         ok             -> ?PRINT_MSG("bridge is stopped.~n");
-%         {error, Error} -> ?PRINT("error: ~p~n", [Error])
-%     end;
-
-% bridges(_) ->
-%     emqx_cli:usage([{"bridges list",                 "List bridges"},
-%                     {"bridges options",              "Bridge options"},
-%                     {"bridges start <Node> <Topic>", "Start a bridge"},
-%                     {"bridges start <Node> <Topic> <Options>", "Start a bridge with options"},
-%                     {"bridges stop <Node> <Topic>", "Stop a bridge"}]).
-
-% parse_opts(Cmd, OptStr) ->
-%     Tokens = string:tokens(OptStr, ","),
-%     [parse_opt(Cmd, list_to_atom(Opt), Val)
-%         || [Opt, Val] <- [string:tokens(S, "=") || S <- Tokens]].
-% parse_opt(bridge, qos, Qos) ->
-%     {qos, list_to_integer(Qos)};
-% parse_opt(bridge, suffix, Suffix) ->
-%     {topic_suffix, bin(Suffix)};
-% parse_opt(bridge, prefix, Prefix) ->
-%     {topic_prefix, bin(Prefix)};
-% parse_opt(bridge, queue, Len) ->
-%     {max_queue_len, list_to_integer(Len)};
-% parse_opt(_Cmd, Opt, _Val) ->
-%     ?PRINT("Bad Option: ~s~n", [Opt]).
-
 bridges(["list"]) ->
-    foreach(fun({Name, State}) ->
-                emqx_cli:print("name: ~s     status: ~s~n", [Name, State])
-            end, emqx_bridge1_sup:bridges());
+    foreach(fun({Node, Topic, _Pid}) ->
+                emqx_cli:print("bridge: ~s--~s-->~s~n", [node(), Topic, Node])
+            end, emqx_bridge_sup_sup:bridges());
 
-bridges(["start", Name]) ->
-    ?PRINT("~s.~n", [emqx_bridge1:start_bridge(list_to_atom(Name))]);
+bridges(["options"]) ->
+    ?PRINT_MSG("Options:~n"),
+    ?PRINT_MSG("  qos     = 0 | 1 | 2~n"),
+    ?PRINT_MSG("  prefix  = string~n"),
+    ?PRINT_MSG("  suffix  = string~n"),
+    ?PRINT_MSG("  queue   = integer~n"),
+    ?PRINT_MSG("Example:~n"),
+    ?PRINT_MSG("  qos=2,prefix=abc/,suffix=/yxz,queue=1000~n");
 
-bridges(["stop", Name]) ->
-    ?PRINT("~s.~n", [emqx_bridge1:stop_bridge(list_to_atom(Name))]);
+bridges(["start", SNode, Topic]) ->
+    case emqx_bridge_sup_sup:start_bridge(list_to_atom(SNode), list_to_binary(Topic)) of
+        {ok, _}        -> ?PRINT_MSG("bridge is started.~n");
+        {error, Error} -> ?PRINT("error: ~p~n", [Error])
+    end;
+
+bridges(["start", SNode, Topic, OptStr]) ->
+    Opts = parse_opts(bridge, OptStr),
+    case emqx_bridge_sup_sup:start_bridge(list_to_atom(SNode), list_to_binary(Topic), Opts) of
+        {ok, _}        -> ?PRINT_MSG("bridge is started.~n");
+        {error, Error} -> ?PRINT("error: ~p~n", [Error])
+    end;
+
+bridges(["stop", SNode, Topic]) ->
+    case emqx_bridge_sup_sup:stop_bridge(list_to_atom(SNode), list_to_binary(Topic)) of
+        ok             -> ?PRINT_MSG("bridge is stopped.~n");
+        {error, Error} -> ?PRINT("error: ~p~n", [Error])
+    end;
 
 bridges(_) ->
-    emqx_cli:usage([{"bridges list",          "List bridges"},
-                    {"bridges start <Name>",  "Start a bridge"},
-                    {"bridges stop <Name>",   "Stop a bridge"}]).
+    emqx_cli:usage([{"bridges list",                 "List bridges"},
+                    {"bridges options",              "Bridge options"},
+                    {"bridges start <Node> <Topic>", "Start a bridge"},
+                    {"bridges start <Node> <Topic> <Options>", "Start a bridge with options"},
+                    {"bridges stop <Node> <Topic>", "Stop a bridge"}]).
+
+parse_opts(Cmd, OptStr) ->
+    Tokens = string:tokens(OptStr, ","),
+    [parse_opt(Cmd, list_to_atom(Opt), Val)
+        || [Opt, Val] <- [string:tokens(S, "=") || S <- Tokens]].
+parse_opt(bridge, qos, Qos) ->
+    {qos, list_to_integer(Qos)};
+parse_opt(bridge, suffix, Suffix) ->
+    {topic_suffix, bin(Suffix)};
+parse_opt(bridge, prefix, Prefix) ->
+    {topic_prefix, bin(Prefix)};
+parse_opt(bridge, queue, Len) ->
+    {max_queue_len, list_to_integer(Len)};
+parse_opt(_Cmd, Opt, _Val) ->
+    ?PRINT("Bad Option: ~s~n", [Opt]).
+
+%% bridges(["list"]) ->
+%%     foreach(fun({Name, State}) ->
+%%                 emqx_cli:print("name: ~s     status: ~s~n", [Name, State])
+%%             end, emqx_bridge1_sup:bridges());
+
+%% bridges(["start", Name]) ->
+%%     ?PRINT("~s.~n", [emqx_bridge1:start_bridge(list_to_atom(Name))]);
+
+%% bridges(["stop", Name]) ->
+%%     ?PRINT("~s.~n", [emqx_bridge1:stop_bridge(list_to_atom(Name))]);
+
+%% bridges(_) ->
+%%     emqx_cli:usage([{"bridges list",          "List bridges"},
+%%                     {"bridges start <Name>",  "Start a bridge"},
+%%                     {"bridges stop <Name>",   "Stop a bridge"}]).
+
+%%--------------------------------------------------------------------
+%% @doc Edges command
+edge(["bridge", "status"]) ->
+    foreach(fun({Name, State}) ->
+                    emqx_cli:print("name: ~s     status: ~s~n", [Name, State])
+                    end, emqx_edge_bridge_sup:bridges());
+edge(["static", "start"]) ->
+    emqx_edge:start(static);
+    
+edge(["static", "stop"]) ->
+    emqx_edge:stop(static),
+    ?PRINT_MSG("stop edge successfully.");
+edge(["list"]) ->
+    ?PRINT_MSG("list edge successfully");
+edge(["add", Host]) ->
+    ?PRINT_MSG("add edge successfully");
+edge(["remove"]) ->
+    ?PRINT_MSG("add edge succecc");
+edge(_) ->
+    emqx_cli:usage([{"edge start",                 "start edge cluster"},
+                    {"edge list",                  "list edge clusters"},
+                    {"edge list <Name>",           "list nodes of specified edge cluster"},
+                    {"edge add <Name> <Hosts>",    "add hosts to specified edge cluster"},
+                    {"edge remove <Name> <Hosts>", "remove hosts from specified edge cluster"}
+                   ]).
+
+%% %%--------------------------------------------------------------------
+%% %% @doc Edge Queue commands
+%% edge_queue(["create", Name, Topics]) ->
+%%     ?PRINT_MSG("create edge queue successfully");
+%% edge_queue(["list"]) ->
+%%     ?PRINT_MSG("list edge queue successfully");
+%% edge_queue(["remove"]) ->
+%%     ?PRINT_MSG("remove edge queue successfully");
+%% edge_queue(_) ->
+%%     emqx_cli:usage([{"edge_queue create <Topic>", "create edge queues"},
+%%                     {"edge_queue list"                 , "list edge queues"},
+%%                     {"edge_queue remove <Topic>"        , "remove specified edge queue"}
+%%                    ]).
+
 %%--------------------------------------------------------------------
 %% @doc vm command
 
